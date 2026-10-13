@@ -105,3 +105,15 @@ Al terminar, agregue aquí abajo las dos secciones escritas en inglés (3 a 5 fr
 ---
 
 Las plantillas de `docs/` provienen del Mobile Governance Framework (licencia MIT; ver `docs/LICENSE-mobile-governance-framework.txt`).
+
+## API error handling
+
+The API uses centralized error-handling middleware to return consistent JSON error responses.
+
+- **400 Bad Request:** Invalid product data, invalid IDs, or malformed JSON.
+- **404 Not Found:** The requested product or route does not exist.
+- **500 Internal Server Error:** Unexpected server errors.
+
+Error responses include an `error` message and a `details` array. Unknown routes are handled by a dedicated middleware that returns a 404 response.
+
+The centralized error handler processes errors passed through Express middleware, including malformed JSON errors, without replacing the existing middleware configuration.

@@ -61,16 +61,159 @@ function createApp() {
   //   const { search, category } = req.query;
   //   `search`: el nombre contiene el texto, sin distinguir mayúsculas (toLowerCase + includes).
   //   `category`: igual a la categoría (exacta). Use `.filter` sobre el arreglo.
-  app.get('/api/products', notImplemented);
+  app.get('/api/products', (req, res) => {
+  const { search, category } = req.query;
+
+  let result = products;
+
+  if (typeof search === 'string' && search.trim() !== '') {
+    const term = search.toLowerCase();
+    result = result.filter((product) =>
+      product.name.toLowerCase().includes(term)
+    );
+  }
+
+  if (typeof category === 'string' && category !== '') {
+    result = result.filter((product) => product.category === category);
+  }
+  res.status(200).json(result);
+});
   // TODO(Parte 2): GET /api/products/:id → 200 | 400 (parseId devuelve null) | 404 (no existe).
-  app.get('/api/products/:id', notImplemented);
+  app.get('/api/products/:id', (req, res) => {
+  const id = parseId(req.params.id);
+
+  if (id === null) {
+    return res.status(400).json({
+      error: 'ID no válido',
+      details: ['El id debe ser un número entero positivo.'],
+    });
+  }
+
+  const product = products.find((item) => item.id === id);
+
+  if (!product) {
+    return res.status(404).json({
+      error: 'Producto no encontrado',
+      details: [],
+    });
+  }
+
+  return res.status(200).json(product);
+});
   // TODO(Parte 2): POST /api/products → 201 con el producto creado | 400 con { error, details[] }.
   //   Patrón de validación:  const details = [];  if (...) details.push('mensaje');
-  app.post('/api/products', notImplemented);
+ let nextId = Math.max(0, ...products.map((product) => product.id)) + 1;
+
+function validateProduct(body) {
+  const details = [];
+  const { name, price, category, stock } = body ?? {};
+
+  if (typeof name !== 'string' || name.trim() === '') {
+    details.push('El nombre es obligatorio y debe ser texto.');
+  } else if (name.trim().length > 60) {
+    details.push('El nombre no puede superar los 60 caracteres.');
+  }
+
+  if (typeof price !== 'number' || !Number.isFinite(price) || price <= 0) {
+    details.push('El precio debe ser un número mayor que 0.');
+  }
+
+  if (typeof category !== 'string' || !CATEGORIES.includes(category)) {
+    details.push(`La categoría debe ser una de: ${CATEGORIES.join(', ')}.`);
+  }
+
+  if (!Number.isInteger(stock) || stock < 0) {
+    details.push('El stock debe ser un entero mayor o igual que 0.');
+  }
+
+  return details;
+}
+
+app.post('/api/products', (req, res) => {
+  const details = validateProduct(req.body);
+
+  if (details.length > 0) {
+    return res.status(400).json({
+      error: 'Datos de producto no válidos',
+      details,
+    });
+  }
+
+  const product = {
+    id: nextId++,
+    name: req.body.name.trim(),
+    price: req.body.price,
+    category: req.body.category,
+    stock: req.body.stock,
+  };
+
+  products.push(product);
+  return res.status(201).json(product);
+});
   // TODO(Parte 2): PUT /api/products/:id → 200 con el producto actualizado | 400 | 404.
-  app.put('/api/products/:id', notImplemented);
+  app.put('/api/products/:id', (req, res) => {
+  const id = parseId(req.params.id);
+
+  if (id === null) {
+    return res.status(400).json({
+      error: 'ID no válido',
+      details: ['El id debe ser un número entero positivo.'],
+    });
+  }
+
+  const index = products.findIndex((item) => item.id === id);
+
+  if (index === -1) {
+    return res.status(404).json({
+      error: 'Producto no encontrado',
+      details: [],
+    });
+  }
+
+  const details = validateProduct(req.body);
+
+  if (details.length > 0) {
+    return res.status(400).json({
+      error: 'Datos de producto no válidos',
+      details,
+    });
+  }
+
+  const updatedProduct = {
+    id,
+    name: req.body.name.trim(),
+    price: req.body.price,
+    category: req.body.category,
+    stock: req.body.stock,
+  };
+
+  products[index] = updatedProduct;
+
+  return res.status(200).json(updatedProduct);
+});
   // TODO(Parte 2): DELETE /api/products/:id → 204 sin cuerpo (res.status(204).end()) | 400 | 404.
-  app.delete('/api/products/:id', notImplemented);
+  app.delete('/api/products/:id', (req, res) => {
+  const id = parseId(req.params.id);
+
+  if (id === null) {
+    return res.status(400).json({
+      error: 'ID no válido',
+      details: ['El id debe ser un número entero positivo.'],
+    });
+  }
+
+  const index = products.findIndex((item) => item.id === id);
+
+  if (index === -1) {
+    return res.status(404).json({
+      error: 'Producto no encontrado',
+      details: [],
+    });
+  }
+
+  products.splice(index, 1);
+  return res.status(204).end();
+});
 
   // YA DADO: ruta desconocida → 404 con el formato de error uniforme.
   app.use((req, res) => {
